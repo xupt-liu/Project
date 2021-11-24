@@ -1,4 +1,4 @@
-package com.atguigu.logger;
+package com.xiyou.logger;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

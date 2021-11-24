@@ -1,4 +1,4 @@
-package com.atguigu.logger.controller;
+package com.xiyou.logger.controller;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;

@@ -1,4 +1,4 @@
-package com.atguigu.logger;
+package com.xiyou.logger;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
