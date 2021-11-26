@@ -62,6 +62,13 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <!--此处为版本的修改-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.1.0</version>
+            </plugin>
+            <!---->
         </plugins>
     </build>
 
