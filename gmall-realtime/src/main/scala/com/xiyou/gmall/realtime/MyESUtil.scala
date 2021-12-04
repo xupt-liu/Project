@@ -1,7 +1,14 @@
 package com.xiyou.gmall.realtime
 
+import java.util
+
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
+import org.elasticsearch.search.builder.SearchSourceBuilder
+import io.searchbox.core._
+import org.elasticsearch.index.query.{BoolQueryBuilder, MatchQueryBuilder, TermQueryBuilder}
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder
+import org.elasticsearch.search.sort.SortOrder
 
 /**
  * @author: xy_mono
@@ -38,7 +45,7 @@ object MyESUtil {
     //获取客户端连接
     val jestClient: JestClient = getJestClient()
     //定义执行的source
-    var source:String =
+    var source:String = {
     """{
       |  "id":300,
       |  "name":"incident red sea",
@@ -47,6 +54,8 @@ object MyESUtil {
       |{"id":4,"name":"zhang san feng"}
       |]
       |}""".stripMargin
+
+    }
     //创建插入类 Index   Builder中的参数表示要插入到索引中的文档，底层会转换Json格式的字符串，所以也可以将文档封装为样例类对象
     val index:Index = new Index.Builder(source)
       .index("movie_index_5")
@@ -63,6 +72,7 @@ object MyESUtil {
   def putIndex2(): Unit ={
     val jestClient = getJestClient()
 
+    //此处是List和Map方法
     val actorList: util.ArrayList[util.Map[String, Any]] = new util.ArrayList[util.Map[String,Any]]()
     val actorMap1: util.HashMap[String, Any] = new util.HashMap[String,Any]()
     actorMap1.put("id",66)
@@ -75,11 +85,17 @@ object MyESUtil {
     val index: Index = new Index.Builder(movie)
       .index("movie_index_5")
       .`type`("movie")
-      .id("2").build()
+      .id("2")
+      .build()
     jestClient.execute(index)
     jestClient.close()
   }
 
-}
+  def main(args: Array[String]): Unit = {
+    putIndex2()
+  }
 
+}
+//此处的Util是为了让Json解析方便，Json解析工具一般是认定java的，所以需要导入java.util-----样例类
+case class Movie(id:Long,name:String,doubanScore:Float,actorList:util.List[util.Map[String,Any]]){}
 
