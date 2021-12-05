@@ -92,7 +92,124 @@ object MyESUtil {
   }
 
   def main(args: Array[String]): Unit = {
-    putIndex2()
+    queryIndexById()
+  }
+
+    //根据文档的id,从ES中查询出一条记录
+  def queryIndexById(): Unit ={
+    val jestClient = getJestClient()
+    val get:Get = new Get.Builder("movie_index_5","2").build()
+    val res:DocumentResult = jestClient.execute(get)
+    println(res.getJsonString)
+    jestClient.close()
+  }
+
+  //根据指定查询条件，从ES中查询多个文档  方式1
+  def queryIndexByCondition1(): Unit ={
+    val jestClient = getJestClient()
+    var query:String =
+      """
+        |{
+        |  "query": {
+        |    "bool": {
+        |       "must": [
+        |        {"match": {
+        |          "name": "天龙"
+        |        }}
+        |      ],
+        |      "filter": [
+        |        {"term": { "actorList.name.keyword": "李若彤"}}
+        |      ]
+        |    }
+        |  },
+        |  "from": 0,
+        |  "size": 20,
+        |  "sort": [
+        |    {
+        |      "doubanScore": {
+        |        "order": "desc"
+        |      }
+        |    }
+        |  ],
+        |  "highlight": {
+        |    "fields": {
+        |      "name": {}
+        |    }
+        |  }
+        |}
+      """.stripMargin
+    //封装Search对象
+    val search: Search = new Search.Builder(query)
+      .addIndex("movie_index_5")
+      .build()
+    val res: SearchResult = jestClient.execute(search)
+    val list: util.List[SearchResult#Hit[util.Map[String, Any], Void]] = res.getHits(classOf[util.Map[String,Any]])
+    //将java的List转换为json的List
+    import scala.collection.JavaConverters._
+    val resList1: List[util.Map[String, Any]] = list.asScala.map(_.source).toList
+
+    println(resList1.mkString("\n"))
+
+    jestClient.close()
+  }
+
+
+  //根据指定查询条件，从ES中查询多个文档  方式2
+  def queryIndexByCondition2(): Unit ={
+    val jestClient = getJestClient()
+    //SearchSourceBuilder用于构建查询的json格式字符串
+    val searchSourceBuilder: SearchSourceBuilder = new SearchSourceBuilder
+    val boolQueryBuilder: BoolQueryBuilder = new BoolQueryBuilder()
+    boolQueryBuilder.must(new MatchQueryBuilder("name","天龙"))
+    boolQueryBuilder.filter(new TermQueryBuilder("actorList.name.keyword","李若彤"))
+    searchSourceBuilder.query(boolQueryBuilder)
+    searchSourceBuilder.from(0)
+    searchSourceBuilder.size(10)
+    searchSourceBuilder.sort("doubanScore",SortOrder.ASC)
+    searchSourceBuilder.highlighter(new HighlightBuilder().field("name"))
+    val query: String = searchSourceBuilder.toString
+    //println(query)
+
+    val search: Search = new Search.Builder(query).addIndex("movie_index_5").build()
+    val res: SearchResult = jestClient.execute(search)
+    val resList: util.List[SearchResult#Hit[util.Map[String, Any], Void]] = res.getHits(classOf[util.Map[String,Any]])
+
+    import scala.collection.JavaConverters._
+    val list = resList.asScala.map(_.source).toList
+    println(list.mkString("\n"))
+
+    jestClient.close()
+  }
+
+  def main(args: Array[String]): Unit = {
+    queryIndexByCondition2()
+  }
+
+  /**
+   * 向ES中批量插入数据
+   * @param infoList
+   * @param indexName
+   */
+  def bulkInsert(infoList: List[(String,Any)], indexName: String): Unit = {
+
+    if(infoList!=null && infoList.size!= 0){
+      //获取客户端
+      val jestClient = getJestClient()
+      val bulkBuilder: Bulk.Builder = new Bulk.Builder()
+      for ((id,dauInfo) <- infoList) {
+        val index: Index = new Index.Builder(dauInfo)
+          .index(indexName)
+          .id(id)
+          .`type`("_doc")
+          .build()
+        bulkBuilder.addAction(index)
+      }
+      //创建批量操作对象
+      val bulk: Bulk = bulkBuilder.build()
+      val bulkResult = jestClient.execute(bulk)
+      println("向ES中插入"+bulkResult.getItems.size()+"条数据")
+      jestClient.close()
+    }
   }
 
 }
