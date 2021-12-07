@@ -162,9 +162,11 @@ object MyESUtil {
     val boolQueryBuilder: BoolQueryBuilder = new BoolQueryBuilder()
     boolQueryBuilder.must(new MatchQueryBuilder("name","天龙"))
     boolQueryBuilder.filter(new TermQueryBuilder("actorList.name.keyword","李若彤"))
+    //此处之所以使用bool类型，是由查询语句决定的，看方式1
     searchSourceBuilder.query(boolQueryBuilder)
     searchSourceBuilder.from(0)
     searchSourceBuilder.size(10)
+    //对结果进行排序
     searchSourceBuilder.sort("doubanScore",SortOrder.ASC)
     searchSourceBuilder.highlighter(new HighlightBuilder().field("name"))
     val query: String = searchSourceBuilder.toString
