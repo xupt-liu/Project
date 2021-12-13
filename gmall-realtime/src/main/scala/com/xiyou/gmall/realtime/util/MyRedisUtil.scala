@@ -11,19 +11,6 @@ object MyRedisUtil {
   //定义一个连接池对象
   private var jedisPool: JedisPool = null
 
-  def main(args: Array[String]): Unit = {
-    val jedis = getJedisClient()
-    println(jedis.ping())
-  }
-
-  //获取Jedis客户端
-  def getJedisClient(): Jedis = {
-    if (jedisPool == null) {
-      build()
-    }
-    jedisPool.getResource
-  }
-
   //创建JedisPool连接池对象
   def build(): Unit = {
     val prop = MyPropertiesUtil.load("config.properties")
@@ -39,5 +26,19 @@ object MyRedisUtil {
     jedisPoolConfig.setTestOnBorrow(true) //每次获得连接的进行测试
 
     jedisPool = new JedisPool(jedisPoolConfig, host, port.toInt)
+  }
+
+  def main(args: Array[String]): Unit = {
+    val jedis = getJedisClient()
+    println(jedis.ping())
+    jedis.close()
+  }
+
+  //获取Jedis客户端
+  def getJedisClient(): Jedis = {
+    if (jedisPool == null) {
+      build()
+    }
+    jedisPool.getResource
   }
 }
