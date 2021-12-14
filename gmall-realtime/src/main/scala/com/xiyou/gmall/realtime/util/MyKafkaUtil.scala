@@ -16,9 +16,10 @@ import java.util.Properties
  */
 
 object MyKafkaUtil {
-  val broker_list = properties.getProperty("kafka.broker.list")
-//  val broker_list = properties.getProperty("kafka.broker.list")
+
+  //  val broker_list = properties.getProperty("kafka.broker.list")
   private val properties: Properties = MyPropertiesUtil.load("config.properties")
+  val broker_list = properties.getProperty("kafka.broker.list")
   // kafka消费者配置,此处是一个scala的可变集合
   var kafkaParam = collection.mutable.Map(
     "bootstrap.servers" -> broker_list, //用于初始化链接到集群的地址

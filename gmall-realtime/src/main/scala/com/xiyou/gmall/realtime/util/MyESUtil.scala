@@ -13,7 +13,7 @@ import java.util
 /**
  * Author: xy_mo
  * Date: 2021/12/5
- * Desc: 操作ES的客户端工具类
+ * Desc: 操作ES的客户端工具类,注意工厂模式和构造者模式
  */
 object MyESUtil {
 
@@ -180,16 +180,16 @@ object MyESUtil {
   /**
    * 向ES中批量插入数据
    *
-   * @param infoList
-   * @param indexName
+   * @param dauInfList
+   * @param str
    */
-  def bulkInsert(infoList: List[(String, Any)], indexName: String): Unit = {
+  def bulkInsert(dauInfList: List[(String, Any)], indexName: String): Unit = {
 
-    if (infoList != null && infoList.size != 0) {
+    if (dauInfList != null && dauInfList.size != 0) {
       //获取客户端
       val jestClient = getJestClient()
       val bulkBuilder: Bulk.Builder = new Bulk.Builder()
-      for ((id, dauInfo) <- infoList) {
+      for ((id, dauInfo) <- dauInfList) {
         val index: Index = new Index.Builder(dauInfo)
           .index(indexName)
           .id(id)
@@ -197,6 +197,7 @@ object MyESUtil {
           .build()
         bulkBuilder.addAction(index)
       }
+
       //创建批量操作对象
       val bulk: Bulk = bulkBuilder.build()
       val bulkResult = jestClient.execute(bulk)
