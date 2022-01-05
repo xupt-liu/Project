@@ -10,10 +10,10 @@ import java.util.Properties
  * Desc: 读取配置文件的工具类
  */
 object MyPropertiesUtil {
-  def main(args: Array[String]): Unit = {
-    val prop: Properties = MyPropertiesUtil.load("config.properties")
-    println(prop.getProperty("kafka.broker.list"))
-  }
+  //  def main(args: Array[String]): Unit = {
+  //    val prop: Properties = MyPropertiesUtil.load("config.properties")
+  //    println(prop.getProperty("kafka.broker.list"))
+  //  }
 
   def load(propertiesName: String): Properties = {
     val prop: Properties = new Properties()

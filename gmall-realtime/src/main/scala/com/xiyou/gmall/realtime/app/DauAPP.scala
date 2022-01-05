@@ -17,7 +17,7 @@ import scala.collection.mutable.ListBuffer
 /**
  * @author: xy_mono
  * @date: 2021/12/11
- * @description:日活业务
+ * @description:日活业务实现
  */
 
 
@@ -130,10 +130,10 @@ object DauAPP {
         //以分区为单位对数据进行处理
         rdd.foreachPartition {
           jsonObjItr => {
-            val dauInfList: List[DauInfo] = jsonObjItr.map {
+            val dauInfList: List[(String, DauInfo)] = jsonObjItr.map {
               jsonObj => {
                 val commonJsonObj: JSONObject = jsonObj.getJSONObject("common")
-                DauInfo(
+                val dauInfo: DauInfo = DauInfo(
                   commonJsonObj.getString("mid"),
                   commonJsonObj.getString("uid"),
                   commonJsonObj.getString("ar"),
@@ -144,8 +144,9 @@ object DauAPP {
                   "00",
                   jsonObj.getLong("ts")
                 )
+                dauInfo
               }
-            }.toList
+            }
             //将数据批量保存到ES中
             val dt: String = new SimpleDateFormat("yyyy-MM-dd").format(new Date())
             MyESUtil.bulkInsert(dauInfList, "gmall2021_dau_info_" + dt)
@@ -153,7 +154,6 @@ object DauAPP {
         }
       }
     }
-
     //开启任务
     ssc.start()
     ssc.awaitTermination()
