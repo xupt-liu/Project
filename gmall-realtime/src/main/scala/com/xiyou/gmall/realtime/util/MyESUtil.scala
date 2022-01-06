@@ -1,5 +1,6 @@
 package com.xiyou.gmall.realtime.util
 
+import com.xiyou.gmall.realtime.bean.DauInfo
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core._
@@ -17,20 +18,19 @@ object MyESUtil {
   /**
    * 向ES中批量插入数据
    *
-   * @param dauInfList
+   * @param dauInfoList
    * @param str
    */
-  def bulkInsert(dauInfList: List[(String, Any)], indexName: String): Unit = {
+  def bulkInsert(dauInfoList: List[(DauInfo)], indexName: String): Unit = {
 
-    if (dauInfList != null && dauInfList.size != 0) {
+    if (dauInfoList != null && dauInfoList.size != 0) {
       //获取客户端
       val jestClient = getJestClient()
 
       val bulkBuilder: Bulk.Builder = new Bulk.Builder()
-      for ((id, dauInfo) <- dauInfList) {
+      for ((dauInfo) <- dauInfoList) {
         val index: Index = new Index.Builder(dauInfo)
           .index(indexName)
-          .id(id)
           .`type`("_doc")
           .build()
         bulkBuilder.addAction(index)
@@ -43,6 +43,16 @@ object MyESUtil {
 
       jestClient.close()
     }
+  }
+
+  def build(): Unit = {
+    jestFactory = new JestClientFactory
+    jestFactory.setHttpClientConfig(new HttpClientConfig
+    .Builder("http://hadoop102:9200")
+      .multiThreaded(true)
+      .maxTotalConnection(20)
+      .connTimeout(10000)
+      .readTimeout(1000).build())
   }
 
   //提供获取Jest客户端的方法
@@ -189,16 +199,6 @@ object MyESUtil {
   //
   //    jestClient.close()
   //  }
-
-  def build(): Unit = {
-    jestFactory = new JestClientFactory
-    jestFactory.setHttpClientConfig(new HttpClientConfig
-    .Builder("http://hadoop102:9200")
-      .multiThreaded(true)
-      .maxTotalConnection(20)
-      .connTimeout(10000)
-      .readTimeout(1000).build())
-  }
 
   //  def main(args: Array[String]): Unit = {
   //    queryIndexByCondition2()

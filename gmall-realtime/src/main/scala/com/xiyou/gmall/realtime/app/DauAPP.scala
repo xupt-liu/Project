@@ -95,7 +95,8 @@ object DauAPP {
     //通过Redis   对采集到的启动日志进行去重操作  方案2  以分区为单位对数据进行处理，每一个分区获取一次Redis的连接
     //redis 类型 set    key：  dau：2020-10-23    value: mid    expire   3600*24
     val filteredDStream: DStream[JSONObject] = jsonObjDStream.mapPartitions {
-      jsonObjItr => { //以分区为单位对数据进行处理
+      jsonObjItr => {
+        //以分区为单位对数据进行处理
         //每一个分区获取一次Redis的连接
         val jedis: Jedis = MyRedisUtil.getJedisClient()
         //定义一个集合，用于存放当前分区中第一次登陆的日志
@@ -130,9 +131,12 @@ object DauAPP {
         //以分区为单位对数据进行处理
         rdd.foreachPartition {
           jsonObjItr => {
-            val dauInfList: List[(String, DauInfo)] = jsonObjItr.map {
+            //将需要保存到ES中的日活数据以list形式保存
+            val dauInfoList: List[(DauInfo)] = jsonObjItr.map {
               jsonObj => {
+                //因为我们所需要处理的信息属性在common中
                 val commonJsonObj: JSONObject = jsonObj.getJSONObject("common")
+                //DauInfo是我们之前封装的样例类
                 val dauInfo: DauInfo = DauInfo(
                   commonJsonObj.getString("mid"),
                   commonJsonObj.getString("uid"),
@@ -146,10 +150,10 @@ object DauAPP {
                 )
                 dauInfo
               }
-            }
+            }.toList
             //将数据批量保存到ES中
             val dt: String = new SimpleDateFormat("yyyy-MM-dd").format(new Date())
-            MyESUtil.bulkInsert(dauInfList, "gmall2021_dau_info_" + dt)
+            MyESUtil.bulkInsert(dauInfoList, "gmall2021_dau_info_" + dt)
           }
         }
       }
