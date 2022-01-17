@@ -2,10 +2,12 @@ package com.xiyou.gmall.realtime.app
 
 import com.alibaba.fastjson.{JSON, JSONObject}
 import com.xiyou.gmall.realtime.bean.DauInfo
-import com.xiyou.gmall.realtime.util.{MyESUtil, MyKafkaUtil, MyRedisUtil}
+import com.xiyou.gmall.realtime.util.{MyESUtil, MyKafkaUtil, MyRedisUtil, OffsetManagerUtil}
 import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.common.TopicPartition
 import org.apache.spark.SparkConf
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
+import org.apache.spark.streaming.kafka010.{HasOffsetRanges, OffsetRange}
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import redis.clients.jedis.Jedis
 
@@ -30,6 +32,28 @@ object DauAPP {
     //消费Kafka数据基本实现
     var topic: String = "gmall_start_1122"
     var groupId: String = "gmall_dau_1122"
+
+    //从Redis中读取偏移量
+    val kafkaOffsetMap: Map[TopicPartition, Long] = OffsetManagerUtil.getOffset(topic, groupId)
+    //此处是将局部变量提取出来作为成员变量，作用域发生变化，因此recordDStream是变量。
+    var recordDStream: InputDStream[ConsumerRecord[String, String]] = null
+    if (kafkaOffsetMap != null && kafkaOffsetMap.size > 0) {
+      //此时Redis中有偏移量 根据Redis中保存的偏移量读取
+      recordDStream = MyKafkaUtil.getKafkaStream(topic, ssc, kafkaOffsetMap, groupId)
+    } else {
+      //Redis中没有保存偏移量 Kafka默认从最新读取
+      recordDStream = MyKafkaUtil.getKafkaStream(topic, ssc, groupId)
+    }
+    //得到本批次中处理数据的分区对应的偏移量起始及结束位置
+    //从kafka中读取数据之后，直接就获取了偏移量的位置，因为kafka可以转换为HasOffsetRange，会自动记录位置
+    var offsetRanges: Array[OffsetRange] = Array.empty[OffsetRange]
+    val offsetDStream: DStream[ConsumerRecord[String, String]] = recordDStream.transform {
+      rdd => {
+        offsetRanges = rdd.asInstanceOf[HasOffsetRanges].offsetRanges
+        println(offsetRanges(0).untilOffset + "*******")
+        rdd
+      }
+    }
 
     //通过SparkStreaming程序从Kafka中读取数据，DStream是指离散化流，是SparkStreaming中的一种抽象表示
     val kafkaDStream: InputDStream[ConsumerRecord[String, String]] = MyKafkaUtil.getKafkaStream(topic, ssc, groupId)
@@ -59,38 +83,6 @@ object DauAPP {
     //测试输出
     //jsonObjDStream.print(1000)
 
-
-    //使用Redis进行去重,采用方案：以分区为单位进行过滤，可以减少和连接池交互的次数
-    //    val filteredDStream: DStream[JSONObject] = jsonObjDStream.mapPartitions {
-    //      jsonObjItr => {
-    //        //获取Redis客户端，每一个分区获取一次Redis的连接
-    //        val jedisClient: Jedis = MyRedisUtil.getJedisClient()
-    //
-    //        //定义一个集合，用于存放当前分区中的第一次登录的日志
-    //        val filteredList = new ListBuffer[JSONObject]()
-    //
-    //        //对分区的数据进行遍历
-    //        for (jsonObject <- jsonObjItr) {
-    //          //获取日期
-    //          val dt: String = jsonObject.getString("dt")
-    //          //获取设备id
-    //          val mid: String = jsonObject.getJSONObject("common").getString("mid")
-    //          //拼接操作redis的key
-    //          var daukey = "dau:" + dt
-    //          val isFirst: lang.Long = jedisClient.sadd(daukey, mid)
-    //          //设置当天的key数据失效时间为24小时
-    //          if (jedisClient.ttl(daukey) < 0) {
-    //            jedisClient.expire(daukey, 3600 * 24)
-    //          }
-    //          if (isFirst == 1L) {
-    //            //说明是第一次登录
-    //            filteredList.append(jsonObject)
-    //          }
-    //        }
-    //        jedisClient.close()
-    //        filteredList.toIterator
-    //      }
-    //    }
 
     //通过Redis   对采集到的启动日志进行去重操作  方案2  以分区为单位对数据进行处理，每一个分区获取一次Redis的连接
     //redis 类型 set    key：  dau：2020-10-23    value: mid    expire   3600*24
@@ -156,6 +148,8 @@ object DauAPP {
             MyESUtil.bulkInsert(dauInfoList, "gmall2021_dau_info_" + dt)
           }
         }
+        //在保存最后提交偏移量
+        OffsetManagerUtil.saveOffset(topic, groupId, offsetRanges)
       }
     }
     //开启任务

@@ -22,6 +22,7 @@ object MyKafkaUtil {
   val broker_list = properties.getProperty("kafka.broker.list")
 
   // kafka消费者配置,此处是一个scala的可变集合
+  //collection.mutable.Map此处是scala中固定搭配，表示可变集合，且是map型， ->连接key和value
   var kafkaParam = collection.mutable.Map(
     "bootstrap.servers" -> broker_list, //用于初始化链接到集群的地址
     "key.deserializer" -> classOf[StringDeserializer],
@@ -39,14 +40,14 @@ object MyKafkaUtil {
   )
 
 
-  // 创建DStream，返回接收到的输入数据   使用默认的消费者组，这里设置了kafka的消费策略
+  // 创建DStream，返回接收到的输入数据
+  // 使用默认的消费者组，这里设置了kafka的消费策略
   def getKafkaStream(topic: String, ssc: StreamingContext): InputDStream[ConsumerRecord[String, String]] = {
-    //KafkaUtils是用于构造Kafka流
+    //KafkaUtils是用于构造Kafka流，此处内部参数都是些基本设置
     val dStream = KafkaUtils.createDirectStream[String, String](
       ssc,
       LocationStrategies.PreferConsistent,
-      ConsumerStrategies.Subscribe[String, String](Array(topic), kafkaParam)
-    )
+      ConsumerStrategies.Subscribe[String, String](Array(topic), kafkaParam))
     dStream
   }
 

@@ -28,11 +28,11 @@ object MyRedisUtil {
     jedisPool = new JedisPool(jedisPoolConfig, host, port.toInt)
   }
 
-  //  def main(args: Array[String]): Unit = {
-  //    val jedis = getJedisClient()
-  //    println(jedis.ping())
-  //    jedis.close()
-  //  }
+  def main(args: Array[String]): Unit = {
+    val jedis = getJedisClient()
+    println(jedis.ping())
+    jedis.close()
+  }
 
   //获取Jedis客户端
   def getJedisClient(): Jedis = {
